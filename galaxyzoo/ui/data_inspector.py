@@ -33,11 +33,6 @@ import numpy as np
 import pandas as pd
 from skimage.exposure import histogram
 from skimage.io import imread
-from skimage.filter import threshold_otsu
-from skimage.morphology import closing, label, square
-from skimage.measure import regionprops
-from skimage.transform import rotate
-from skimage.segmentation import clear_border
 
 # ETS imports
 from traits.api import (HasTraits, Instance, Button, ListStr, CInt, Int,
@@ -48,84 +43,12 @@ from traitsui.tabular_adapter import TabularAdapter
 from chaco.api import Plot, ArrayPlotData, VPlotContainer, gray
 from enable.component_editor import ComponentEditor
 
-################################################################################
-# Image processing functions
-################################################################################
-
-
-def get_cleared_binary_image(x):
-    """ Given an image array, return the binary thresholded image and clear the 
-    border regions.
-    """
-    thresh = threshold_otsu(x)
-    bw = closing(x > thresh, square(3))
-    bw = clear_border(bw)
-    return bw
-
-
-def get_region_bounds(x):
-    """ Given an image array, return the bounding boxes of all regions in it.
-    Input image MUST be a binary image."""
-    bw = label(x)
-    regions = regionprops(bw)
-    bx = []
-    by = []
-    for props in regions:
-        minr, minc, maxr, maxc = props.bbox
-        bx.append((minc, maxc))
-        by.append((minr, maxr))
-    return bx, by
-
-
-def rotate_largest_region(x):
-    """ Label the given image, measure it's region properties, and rotate such 
-    that the largest region in the image becomes flat. """
-    largest_region = get_largest_region(x)
-    orientation = largest_region.orientation
-    rotated_image = rotate(x, angle=-np.rad2deg(orientation), resize=True)
-    return rotated_image
-
-
-def get_bbox_center(bbox):
-    """ Get the center of the bounding box `bbox` """
-    minr, minc, maxr, maxc = bbox
-    rr = (minr + maxr) / 2
-    cc = (minc + maxc) / 2
-    return rr, cc
-
-
-def get_largest_region(x):
-    """ Given an image measure it's region properties and detect the areawise 
-    largest region. """
-    bw = get_cleared_binary_image(x)
-    labeled = label(bw)
-    regions = regionprops(labeled)
-    bounds = [prop.bbox for prop in regions]
-    areas = np.array([abs(t[0] - t[2]) * abs(t[1] - t[3]) for t in bounds])
-    if len(areas) > 0:
-        largest_region = regions[np.argmax(areas)]
-    else:
-        largest_region = regions[0]
-    return largest_region
-
-
-def point_rotate(x, y, theta):
-    """ Rotate the point (x,y) counter-clockwise through an angle `theta` 
-    on the Cartesian plane."""
-    rotmat = np.array([[np.cos(theta), -np.sin(theta)],
-                       [np.sin(theta), np.cos(theta)]])
-    return np.dot(np.array([x, y]), rotmat)
-
-
-def crop_around_centroid(image, rr, cc, rows=128, cols=128):
-    """ Crop an image around the point (rr, cc) such that the dimensions are 
-    rows X cols """
-    rmin = rr - rows / 2
-    rmax = rr + rows / 2
-    cmin = cc - cols / 2
-    cmax = cc + cols / 2
-    cropped = image[rmin:rmax, cmin:cmax]
-    return cropped
+# Local imports
+from galaxyzoo.processing.api import (TRAINING_IMAGES_DIR, TRAINING_SOLN_PATH,
+                                      get_cleared_binary_image,
+                                      get_region_bounds, rotate_largest_region,
+                                      get_bbox_center, get_largest_region,
+                                      point_rotate, crop_around_centroid)
 
 
 ################################################################################
@@ -282,8 +205,7 @@ class DataInspector(HasTraits):
                          editor=ButtonEditor(), show_label=False)
                 )
             )
-        ),
-                    resizable=True)
+        ), resizable=True)
         return view
 
     def get_random_image(self):
@@ -301,8 +223,7 @@ class DataInspector(HasTraits):
             if self.image_plot_cache.has_key(id):
                 return pdf, self.image_plot_cache.get(id)
             else:
-                filename = os.path.join(os.getcwd(), 'images_training',
-                                        str(id) + '.jpg')
+                filename = os.path.join(TRAINING_IMAGES_DIR, str(id) + '.jpg')
                 im = imread(filename)
                 self.image_plot_cache[id] = im
             return pdf, im
@@ -355,11 +276,11 @@ class DataInspector(HasTraits):
 
     # Trait initializers ######################################################
     def _files_default(self):
-        return [os.path.join('images_training', f) for f in
-                os.listdir(os.path.join(os.getcwd(), 'images_training'))]
+        return [os.path.join(TRAINING_IMAGES_DIR, image) for image in
+                os.listdir(TRAINING_IMAGES_DIR)]
 
     def _solutions_default(self):
-        return pd.read_csv('solutions_training.csv', index_col=0)
+        return pd.read_csv(TRAINING_SOLN_PATH, index_col=0)
 
     def _adapter_default(self):
         return DataFrameAdapter(data=self.solutions)
@@ -374,8 +295,7 @@ class DataInspector(HasTraits):
         return apd
 
     def _image_data_default(self):
-        filename = os.path.join(os.getcwd(), 'images_training',
-                                str(self.data_id) + '.jpg')
+        filename = os.path.join(TRAINING_IMAGES_DIR, str(self.data_id) + '.jpg')
         im = imread(filename)
         self.image_plot_cache[id] = im
         apd = ArrayPlotData(im=im)
@@ -452,7 +372,6 @@ class DataInspector(HasTraits):
         plot.img_plot('im', colormap=gray)
         return plot
 
-
     # Trait change handlers ###################################################
     def _button_fired(self):
         ind = np.random.randint(0, self.solutions.shape[0])
@@ -469,13 +388,11 @@ class DataInspector(HasTraits):
             pdf, im = data
             self.soln_data.set_data('y', pdf.values)
             self.image_data.set_data('im', im)
-            self.restuple = im.shape
             hist = histogram(im[:, :, 0])
             self.histogram_plotdata.set_data('x', hist[1])
             self.histogram_plotdata.set_data('y', hist[0])
             self.update_labeled_image_data()
             self.update_cropped_image_data()
-
 
     def _selected_row_changed(self, new):
         self.data_id = self.solutions.index[new]
