@@ -2,6 +2,9 @@
 ###################
 *.pyc
 
+# Vim swap files
+*.swp
+
 # Packages #
 ############
 # it's better to unpack these files and commit the raw source
@@ -24,3 +27,6 @@ images_training/
 processed_images/
 reading/
 .idea/
+build/
+dist/
+galaxyzoo.egg-info/
