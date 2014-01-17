@@ -1,4 +1,4 @@
-import data_inspector as di
+import galaxyzoo.processing.api as di
 import os
 import json
 import matplotlib.pyplot as plt

@@ -17,7 +17,7 @@ import tables
 TRAINING_IMAGES_DIR = "/Users/jaidevd/GitHub/kaggle/galaxyzoo/images_training"
 TRAINING_SOLN_PATH = "/Users/jaidevd/GitHub/kaggle/galaxyzoo/solutions_training.csv"
 PROCESSED_IMAGES_DIR = "/Users/jaidevd/GitHub/kaggle/galaxyzoo/processed_images"
-DEFECTS = '/Users/jaidevd/GitHub/kaggle/galaxy_zoo/defective_files.json'
+DEFECTS = '/Users/jaidevd/GitHub/kaggle/galaxyzoo/defective_files.json'
 
 solutions = pd.read_csv(TRAINING_SOLN_PATH, index_col=0)
 all_files = [f for f in os.listdir((PROCESSED_IMAGES_DIR)) if f.endswith('png')]
@@ -172,7 +172,7 @@ def point_rotate(x, y, theta):
     """
     rotmat = np.array([[np.cos(theta), -np.sin(theta)],
                        [np.sin(theta),  np.cos(theta)]])
-    return np.dot(np.array([x,y]), rotmat)
+    return np.dot(rotmat, np.array([[x],[y]])).ravel()
 
 
 def crop_around_centroid(image, rr, cc, rows=128, cols=128):
@@ -194,7 +194,7 @@ def crop_around_centroid(image, rr, cc, rows=128, cols=128):
     return cropped
 
 
-def create_matrix_from_images():
+def create_matrix_from_images(n_images=None):
     """
     Creates a numpy array from flattened image arrays. The images are read from
     the directory contained in the directory containing the training images.
@@ -217,13 +217,22 @@ def create_matrix_from_images():
     for filename in all_files:
         if filename not in defects:
             impath = os.path.join(PROCESSED_IMAGES_DIR, filename)
-            x = plt.imread(impath)[:, :, 0].ravel()
-            X[i, :x.shape[0]] = x
-            indices.append(int(filename.split('.')[0]))
-            i += 1
-            if i % 1000 == 0:
-                print i
-    return X, np.array(indices)
+            try:
+                x = plt.imread(impath)[:, :, 0].ravel()
+                X[i, :x.shape[0]] = x
+                indices.append(int(filename.split('.')[0]))
+                i += 1
+                if i % 1000 == 0:
+                    print i
+                if n_images is not None:
+                    if i == n_images:
+                        break
+            except:
+                defects.append(filename)
+    # update defects file
+    with open(DEFECTS,'w') as f:
+        json.dump(defects, f)
+    return X[:n_images,:], np.array(indices)
 
 
 def store_hd5(name, **kwargs):
