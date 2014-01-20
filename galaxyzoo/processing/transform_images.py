@@ -43,7 +43,7 @@ def main():
         i += 1
         if i % 1000 == 0:
             print i
-    with open('defective_files.json','w') as f:
+    with open(os.path.join(ROOT,'defective_files.json'),'w') as f:
         json.dump(defective, f)
 
 if __name__ == "__main__":

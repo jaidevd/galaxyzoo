@@ -63,7 +63,7 @@ class TestAPI(unittest.TestCase):
         errors = (IOError)
         defects = gzapi.get_defective_files()
         for filename in defects:
-            full_path = os.path.join(gzapi.TRAINING_IMAGES_DIR, filename)
+            full_path = os.path.join(gzapi.TRAINING_IMAGES_DIR, filename[0])
             self.assertTrue(os.path.isfile(full_path))
 
     def test_get_processed_image(self):

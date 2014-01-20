@@ -212,8 +212,8 @@ def create_matrix_from_images(n_images=None):
     """
     defects = get_defective_files()
     for defect in defects:
-        if defect in all_files:
-            all_files.remove(defect)
+        if defect[0] in all_files:
+            all_files.remove(defect[0])
     m = len(all_files)
     n = 128 ** 2
     i = 0
@@ -232,8 +232,9 @@ def create_matrix_from_images(n_images=None):
                 if n_images is not None:
                     if i == n_images:
                         break
-            except:
-                defects.append(filename)
+            except Exception, err:
+                if (filename, str(err)) not in defects:
+                    defects.append((filename, str(err)))
     # update defects file
     with open(DEFECTS,'w') as f:
         json.dump(defects, f)
