@@ -30,3 +30,4 @@ reading/
 build/
 dist/
 galaxyzoo.egg-info/
+new_processed_images/
