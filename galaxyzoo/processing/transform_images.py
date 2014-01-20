@@ -3,8 +3,9 @@ import os
 import json
 import matplotlib.pyplot as plt
 
-RAW_IMG_DIR = os.path.join(os.getcwd(),'images_training')
-NEW_IMG_DIR = os.path.join(os.getcwd(), 'processed_images')
+ROOT = "/Users/jaidevd/GitHub/kaggle/galaxyzoo"
+RAW_IMG_DIR = os.path.join(ROOT,'images_training')
+NEW_IMG_DIR = os.path.join(ROOT, 'new_processed_images')
 
 defective = []
 
@@ -27,6 +28,7 @@ def process_image(x):
 
 def main():
     all_files = os.listdir(RAW_IMG_DIR)
+    i = 0
     for image in all_files:
         try:
             filename = os.path.basename(image)
@@ -35,9 +37,12 @@ def main():
             cropped = process_image(x)
             new_path = get_processed_img_path(path)
             plt.imsave(new_path, cropped, cmap=plt.cm.gray)
-        except:
-            defective.append(image)
-        print image
+        except Exception, err:
+            defective.append((image, str(err)))
+            print "Error:", err
+        i += 1
+        if i % 1000 == 0:
+            print i
     with open('defective_files.json','w') as f:
         json.dump(defective, f)
 

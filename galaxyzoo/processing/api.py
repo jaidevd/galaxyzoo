@@ -143,8 +143,11 @@ def get_largest_region(x):
     regions = regionprops(labeled)
     bounds = [prop.bbox for prop in regions]
     areas = np.array([abs(t[0] - t[2])*abs(t[1] - t[3]) for t in bounds])
-    largest_region = regions[np.argmax(areas)]
-    return largest_region
+    if len(areas)!=0:
+        largest_region = regions[np.argmax(areas)]
+        return largest_region
+    else:
+        return None
 
 
 def rotate_largest_region(x):
@@ -156,9 +159,11 @@ def rotate_largest_region(x):
     :return: ndarray
     """
     largest_region = get_largest_region(x)
-    orientation = largest_region.orientation
-    rotated_image = rotate(x, angle=-np.rad2deg(orientation), resize=True)
-    return rotated_image
+    if largest_region is not None:
+        orientation = largest_region.orientation
+        rotated_image = rotate(x, angle=-np.rad2deg(orientation), resize=True)
+        return rotated_image
+    return None
 
 
 def point_rotate(x, y, theta):

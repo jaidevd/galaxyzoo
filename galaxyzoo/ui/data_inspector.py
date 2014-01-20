@@ -113,6 +113,7 @@ class DataFrameAdapter(TabularAdapter):
     def _columns_default(self):
         return [col[5:] for col in self.data.columns]
 
+
 ################################################################################
 # `DataInspector` class
 ################################################################################

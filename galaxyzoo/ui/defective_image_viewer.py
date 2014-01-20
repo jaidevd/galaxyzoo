@@ -8,6 +8,12 @@ import pandas as pd
 import os
 import json
 
+ROOT = "/Users/jaidevd/GitHub/kaggle/galaxyzoo"
+DEFECTS = os.path.join(ROOT,'defective_files.json')
+SOLN_PDF = os.path.join(ROOT, 'solutions_training.csv')
+TRAIN_DATA = os.path.join(ROOT, 'images_training')
+
+
 class Viewer(HasTraits):
 
     img_list = List(Unicode)
@@ -51,20 +57,24 @@ class Viewer(HasTraits):
         return view
     
     def _img_list_default(self):
-        with open('defective_files.json','r') as f:
+        with open(DEFECTS,'r') as f:
             defects = json.load(f)
-        return defects
-    
+        final = [f[0] for f in defects]
+        return final
+
     def _current_image_default(self):
         return self.img_list[0]
     
     def _soln_data_default(self):
-        df = pd.read_csv('solutions_training.csv',index_col=0)
+        df = pd.read_csv(SOLN_PDF,index_col=0)
         indices = [int(im.split('.')[0]) for im in self.img_list]
         return df.ix[indices]
     
     def _plotdata_default(self):
-        x = imread(os.path.join('images_training',self.current_image))
+        try:
+            x = imread(os.path.join(TRAIN_DATA,self.current_image))
+        except:
+            x = np.zeros((424,424),dtype=np.uint8)
         apd = ArrayPlotData(im=x)
         return apd
     
@@ -78,7 +88,6 @@ class Viewer(HasTraits):
         plot.plot(("x","y"), type='bar', fill_color='green', bar_width=.5)
         return plot
         
-    
     def _plot_default(self):
         plot = Plot(self.plotdata)
         plot.img_plot('im')
@@ -92,12 +101,15 @@ class Viewer(HasTraits):
         current_index = self.img_list.index(self.current_image)
         self.current_image = self.img_list[current_index - 1]
     
-    def _current_image_changed(self, new):
-        x = imread(os.path.join('images_training', new))
+    def _current_image_changed(self):
+        try:
+            x = imread(os.path.join(TRAIN_DATA,self.current_image))[:,:,0]
+            self.plotdata.set_data('im', x)
+        except:
+            pass
         y = self.soln_data.ix[int(self.current_image.split('.')[0])].values
-        self.plotdata.set_data('im', x)
-        self.histdata.set_data('y', y)
-    
+        self.histdata.set_data('y',y)
+
 
 if __name__ == "__main__":
     Viewer().configure_traits()
