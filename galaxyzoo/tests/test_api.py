@@ -140,6 +140,21 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(X.shape[1], 128**2)
         self.assertEqual(indices.shape[0], X.shape[0])
 
+    def test_solution_data_first_three_columns(self):
+        df = gzapi.solutions
+        cols = df.columns[:3]
+        s = np.zeros((df.shape[0]))
+        for col in cols:
+            s += df[col].values
+        self.assertTrue(np.allclose(s, np.ones((s.shape[0],))))
+
+    def test_solution_data_class7(self):
+        df = gzapi.solutions
+        x = df['Class1.1'].values
+        y = df['Class7.1'] + df['Class7.2'] + df['Class7.3']
+        y = y.values
+        self.assertTrue(np.allclose(x, y, 1e-4))
+
 
 
 

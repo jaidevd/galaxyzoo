@@ -214,7 +214,10 @@ def create_matrix_from_images(n_images=None):
     for defect in defects:
         if defect[0] in all_files:
             all_files.remove(defect[0])
-    m = len(all_files)
+    if n_images is not None:
+        m = n_images
+    else:
+        m = len(all_files)
     n = 128 ** 2
     i = 0
     X = np.zeros((m, n), dtype=np.uint8)

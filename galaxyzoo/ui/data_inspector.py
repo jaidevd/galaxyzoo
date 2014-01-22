@@ -399,6 +399,77 @@ class DataInspector(HasTraits):
         self.data_id = self.solutions.index[new]
 
 
+################################################################################
+# `ProcessedDataInspector` class
+################################################################################
+class ProcessedDataInspector(HasTraits):
+    """
+    Data inspector to inspect specific image IDs, specified by the indices
+    trait
+    """
+
+    processed_img_dir = "/Users/jaidevd/GitHub/kaggle/galaxyzoo" + \
+                        "/new_processed_images"
+
+    indices = List
+
+    current_index = Int
+
+    next_im = Button
+
+    prev_im = Button
+
+    plotdata = Instance(ArrayPlotData)
+
+    plot = Instance(Plot)
+
+    next_condt = 'indices.index(current_index)<len(indices)-1'
+
+    prev_condt = 'indices.index(current_index)!=0'
+
+    def default_traits_view(self):
+        view = View(VGroup(
+                           Item('plot', editor=ComponentEditor(),
+                                show_label=False),
+                           HGroup(
+                               Item('prev_im',label="Previous",
+                                    enabled_when=self.prev_condt,
+                                    show_label=False, editor=ButtonEditor()),
+                               Item('next_im',label='Next',
+                                    enabled_when=self.next_condt,
+                                    show_label=False, editor=ButtonEditor())
+                           )
+                    ), resizable=True)
+        return view
+
+    def _current_index_default(self):
+        return self.indices[0]
+
+    def _plotdata_default(self):
+        impath = os.path.join(self.processed_img_dir,
+                              str(self.current_index)+'.png')
+        im = imread(impath)
+        apd = ArrayPlotData(im=im)
+        return apd
+
+    def _plot_default(self):
+        plot = Plot(self.plotdata)
+        plot.img_plot("im", colormap=gray)
+        return plot
+
+    def _current_index_changed(self):
+        impath = os.path.join(self.processed_img_dir,
+                              str(self.current_index)+'.png')
+        im = imread(impath)
+        self.plotdata.set_data('im',im)
+
+    def _next_im_fired(self):
+        self.current_index = self.indices[self.indices.index(self.current_index) + 1]
+
+    def _prev_im_fired(self):
+        self.current_index = self.indices[self.indices.index(self.current_index) - 1]
+
+
 if __name__ == "__main__":
     ste = DataInspector()
     ste.configure_traits()
