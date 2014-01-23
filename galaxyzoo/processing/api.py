@@ -14,8 +14,8 @@ from skimage.transform import rotate
 import tables
 
 
-TRAINING_IMAGES_DIR = "/Users/jaidevd/GitHub/kaggle/galaxyzoo/images_training"
-TRAINING_SOLN_PATH = "/Users/jaidevd/GitHub/kaggle/galaxyzoo/solutions_training.csv"
+TRAINING_IMAGES_DIR = "/Users/jaidevd/GitHub/kaggle/galaxyzoo/images_training_rev1"
+TRAINING_SOLN_PATH = "/Users/jaidevd/GitHub/kaggle/galaxyzoo/training_solutions_rev1.csv"
 PROCESSED_IMAGES_DIR = "/Users/jaidevd/GitHub/kaggle/galaxyzoo/processed_images"
 DEFECTS = '/Users/jaidevd/GitHub/kaggle/galaxyzoo/defective_files.json'
 
@@ -23,7 +23,7 @@ solutions = pd.read_csv(TRAINING_SOLN_PATH, index_col=0)
 all_files = [f for f in os.listdir((PROCESSED_IMAGES_DIR)) if f.endswith('png')]
 
 
-def get_data_by_id(galaxy_id, as_grey=False):
+def get_data_by_id(galaxy_id, as_grey=False, dir=TRAINING_IMAGES_DIR):
     """
     Get the training data by the galaxy id
 
@@ -39,7 +39,7 @@ def get_data_by_id(galaxy_id, as_grey=False):
         The probably distribution of the galaxy classifications.
 
     """
-    impath = os.path.join(TRAINING_IMAGES_DIR, str(galaxy_id) + '.jpg')
+    impath = os.path.join(dir, str(galaxy_id) + '.jpg')
     im = plt.imread(impath)
     if as_grey:
         im = im[:, :, 0]
@@ -242,6 +242,23 @@ def create_matrix_from_images(n_images=None):
     with open(DEFECTS,'w') as f:
         json.dump(defects, f)
     return X[:n_images,:], np.array(indices)
+
+
+def create_matrix_from_indices(indices):
+    """
+    Create a matrix from flattened arrays of images specified by indices
+    :param indices: List or array of indices
+    :return: array
+    """
+    X = np.zeros((len(indices),128**2))
+    for i in range(X.shape[0]):
+        impath = os.path.join(PROCESSED_IMAGES_DIR, str(indices[i]) + '.png')
+        try:
+            x = plt.imread(impath)[:,:,0]
+            X[i,:] = x.ravel()
+        except:
+            X[i,:] = np.ones((X.shape[1],))
+    return X
 
 
 def store_hd5(name, **kwargs):

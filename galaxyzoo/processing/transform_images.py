@@ -4,15 +4,15 @@ import json
 import matplotlib.pyplot as plt
 
 ROOT = "/Users/jaidevd/GitHub/kaggle/galaxyzoo"
-RAW_IMG_DIR = os.path.join(ROOT,'images_training')
-NEW_IMG_DIR = os.path.join(ROOT, 'new_processed_images')
+RAW_IMG_DIR = os.path.join(ROOT,'images_training_rev1')
+NEW_IMG_DIR = os.path.join(ROOT, 'processed_images')
 
 defective = []
 
 def get_processed_img_path(path):
     bn = os.path.basename(path)
     image_id = bn.split('.')[0]
-    return os.path.join(NEW_IMG_DIR, image_id+'.png')
+    return os.path.join(NEW_IMG_DIR, image_id+'.jpg')
 
 def process_image(x):
     org_region = di.get_largest_region(x)

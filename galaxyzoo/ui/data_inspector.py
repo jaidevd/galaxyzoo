@@ -409,7 +409,7 @@ class ProcessedDataInspector(HasTraits):
     """
 
     processed_img_dir = "/Users/jaidevd/GitHub/kaggle/galaxyzoo" + \
-                        "/new_processed_images"
+                        "/processed_images"
 
     indices = List
 
@@ -471,5 +471,5 @@ class ProcessedDataInspector(HasTraits):
 
 
 if __name__ == "__main__":
-    ste = DataInspector()
+    ste = ProcessedDataInspector()
     ste.configure_traits()

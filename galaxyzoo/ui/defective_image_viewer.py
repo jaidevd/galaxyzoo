@@ -10,8 +10,8 @@ import json
 
 ROOT = "/Users/jaidevd/GitHub/kaggle/galaxyzoo"
 DEFECTS = os.path.join(ROOT,'defective_files.json')
-SOLN_PDF = os.path.join(ROOT, 'solutions_training.csv')
-TRAIN_DATA = os.path.join(ROOT, 'images_training')
+SOLN_PDF = os.path.join(ROOT, 'training_solutions_rev1.csv')
+TRAIN_DATA = os.path.join(ROOT, 'images_training_rev1')
 
 
 class Viewer(HasTraits):
@@ -103,7 +103,7 @@ class Viewer(HasTraits):
     
     def _current_image_changed(self):
         try:
-            x = imread(os.path.join(TRAIN_DATA,self.current_image))[:,:,0]
+            x = imread(os.path.join(TRAIN_DATA,self.current_image))
             self.plotdata.set_data('im', x)
         except:
             pass
