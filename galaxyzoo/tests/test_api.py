@@ -8,6 +8,7 @@ import shutil
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.draw import circle, ellipse
+from nose import SkipTest
 
 # Local imports
 import galaxyzoo.processing.api as gzapi
@@ -127,6 +128,7 @@ class TestAPI(unittest.TestCase):
         rotated = gzapi.rotate_largest_region(test_img)
         largest_region = gzapi.get_largest_region(rotated)
         self.assertAlmostEqual(largest_region.orientation, 0)
+        self.assertIsNone(gzapi.rotate_largest_region(None))
 
     def test_point_rotate(self):
         x, y = 1.0, 1.0
@@ -136,9 +138,39 @@ class TestAPI(unittest.TestCase):
         self.assertAlmostEqual(y_rot, 1)
 
     def test_create_matrix_from_images(self):
-        X, indices = gzapi.create_matrix_from_images(100)
-        self.assertEqual(X.shape[1], 128**2)
-        self.assertEqual(indices.shape[0], X.shape[0])
+        raise SkipTest()
+        # test the full blown function, read all images and all indices
+        indices, images = gzapi.create_matrix_from_images()
+        self.assertEqual(len(indices), images.shape[0])
+
+    def test_create_matrix_from_images_random(self):
+        # Create a matrix out of randomly selected indices
+        indices, images = gzapi.create_matrix_from_images(random=True,
+                                                          n_images=100)
+        self.assertEqual(len(indices), 100)
+        self.assertEqual(images.shape[0], 100)
+        sample_inds = np.random.randint(0,len(indices),(3,))
+        index_samples = indices[sample_inds]
+        image_samples = images[sample_inds,:]
+        for i in range(3):
+            impath = os.path.join(gzapi.PROCESSED_IMAGES_DIR, 
+                                  str(index_samples[i])+'.jpg')
+            x = plt.imread(impath)[:,:,0].ravel()
+            y = image_samples[i,:]
+            self.assertTrue(np.allclose(x,y))
+        self.assertRaises(ValueError, gzapi.create_matrix_from_images, True)
+
+    def test_create_matrix_from_specific_indices(self):
+        # create a matrix out of specific indices
+        df = gzapi.solutions.values[:,0:3]
+        inds = np.argmax(df, axis=1)
+        smooth = inds == 0
+        smooth_image_indices = gzapi.solutions.index[smooth].values
+        image_indices, X =gzapi.create_matrix_from_images(
+                                                indices=smooth_image_indices)
+        self.assertEqual(len(smooth_image_indices), len(image_indices))
+        self.assertEqual(len(smooth_image_indices), X.shape[0])
+        self.assertTrue(np.allclose(smooth_image_indices, image_indices))
 
     def test_solution_data_first_three_columns(self):
         df = gzapi.solutions
@@ -154,12 +186,6 @@ class TestAPI(unittest.TestCase):
         y = df['Class7.1'] + df['Class7.2'] + df['Class7.3']
         y = y.values
         self.assertTrue(np.allclose(x, y, 1e-4))
-
-
-
-
-
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -20,7 +20,7 @@ PROCESSED_IMAGES_DIR = "/Users/jaidevd/GitHub/kaggle/galaxyzoo/processed_images"
 DEFECTS = '/Users/jaidevd/GitHub/kaggle/galaxyzoo/defective_files.json'
 
 solutions = pd.read_csv(TRAINING_SOLN_PATH, index_col=0)
-all_files = [f for f in os.listdir((PROCESSED_IMAGES_DIR)) if f.endswith('png')]
+all_files = [f for f in os.listdir((PROCESSED_IMAGES_DIR)) if f.endswith('jpg')]
 
 
 def get_data_by_id(galaxy_id, as_grey=False, dir=TRAINING_IMAGES_DIR):
@@ -69,7 +69,7 @@ def get_processed_image(galaxy_id, as_gray=False):
     im : ndarray
         The image array
     """
-    impath = os.path.join(PROCESSED_IMAGES_DIR,str(galaxy_id) + '.png')
+    impath = os.path.join(PROCESSED_IMAGES_DIR,str(galaxy_id) + '.jpg')
     im = plt.imread(impath)
     if as_gray:
         im = im[:,:,0]
@@ -87,9 +87,11 @@ def get_thresholded_image(x):
     ---------
     ndarray, boolean
     """
-    thresh = threshold_otsu(x)
-    bw = closing(x > thresh, square(1))
-    return bw
+    if x is not None:
+        thresh = threshold_otsu(x)
+        bw = closing(x > thresh, square(1))
+        return bw
+    return None
 
 
 def get_cleared_binary_image(x):
@@ -100,9 +102,11 @@ def get_cleared_binary_image(x):
     :return:
     bw: ndarray of type bool
     """
-    bw = get_thresholded_image(x)
-    bw = clear_border(bw)
-    return bw
+    if x is not None:
+        bw = get_thresholded_image(x)
+        bw = clear_border(bw)
+        return bw
+    return None
 
 
 def get_region_bounds(x):
@@ -138,16 +142,16 @@ def get_largest_region(x):
     :param x: ndarray
     :return: skimage.measure._RegionProperties
     """
-    bw = get_cleared_binary_image(x)
-    labeled = label(bw)
-    regions = regionprops(labeled)
-    bounds = [prop.bbox for prop in regions]
-    areas = np.array([abs(t[0] - t[2])*abs(t[1] - t[3]) for t in bounds])
-    if len(areas)!=0:
-        largest_region = regions[np.argmax(areas)]
-        return largest_region
-    else:
-        return None
+    if x is not None:
+        bw = get_cleared_binary_image(x)
+        labeled = label(bw)
+        regions = regionprops(labeled)
+        bounds = [prop.bbox for prop in regions]
+        areas = np.array([abs(t[0] - t[2])*abs(t[1] - t[3]) for t in bounds])
+        if len(areas)!=0:
+            largest_region = regions[np.argmax(areas)]
+            return largest_region
+    return None
 
 
 def rotate_largest_region(x):
@@ -198,79 +202,91 @@ def crop_around_centroid(image, rr, cc, rows=128, cols=128):
     cropped = image[rmin:rmax, cmin:cmax]
     return cropped
 
-
-def create_matrix_from_images(n_images=None):
+def create_matrix_from_images(random=False, indices=None, n_images=None):
     """
-    Creates a numpy array from flattened image arrays. The images are read from
-    the directory contained in the directory containing the training images.
-    Images included in defective_files.json are excluded.
-    :return:
-    --------
-    X: ndarray
-        Shape of X is [n_training_images, number of elements in each image].
-        Each row of X is a flattened version of one image array.
+    Create a matrix from the processed images, such that each row of the matrix
+    is a flattened image array.
+    :param random: If True, `n_images` are selected at random from the dataset
+    and `indices` is ignored.
+    :param indices: If not None, this should be a list or array of integer
+    indices that specify which images to choose for the array.
+    :return X: ndarray
     """
+    all_images = os.listdir(PROCESSED_IMAGES_DIR)
     defects = get_defective_files()
-    for defect in defects:
-        if defect[0] in all_files:
-            all_files.remove(defect[0])
-    if n_images is not None:
-        m = n_images
+    for image in defects:
+        if image[0] in all_images:
+            all_images.remove(image[0])
+    all_images = np.array(all_images)
+    image_indices = []
+    if random:
+        if n_images is not None:
+            X = np.zeros((n_images, 128**2))
+            inds = np.random.randint(0, len(all_images), (n_images,))
+            samples = all_images[inds]
+            for i in range(X.shape[0]):
+                image_indices.append(samples[i].split('.')[0])
+                impath = os.path.join(PROCESSED_IMAGES_DIR, samples[i])
+                try:
+                    x = plt.imread(impath)[:,:,0]
+                except Exception, err:
+                    x = np.ones((128**2,))
+                    defects.append((samples[i], str(err)))
+                X[i,:len(x.ravel())] = x.ravel()
+        else:
+            raise ValueError("n_images cannot be None.")
     else:
-        m = len(all_files)
-    n = 128 ** 2
-    i = 0
-    X = np.zeros((m, n), dtype=np.uint8)
-    indices = []
-    for filename in all_files:
-        if filename not in defects:
-            impath = os.path.join(PROCESSED_IMAGES_DIR, filename)
-            try:
-                x = plt.imread(impath)[:, :, 0].ravel()
-                X[i, :x.shape[0]] = x
-                indices.append(int(filename.split('.')[0]))
-                i += 1
-                if i % 1000 == 0:
-                    print i
-                if n_images is not None:
-                    if i == n_images:
-                        break
-            except Exception, err:
-                if (filename, str(err)) not in defects:
-                    defects.append((filename, str(err)))
-    # update defects file
-    with open(DEFECTS,'w') as f:
+        if indices is not None:
+            indices = map(str, indices)
+            indices = [ind+'.jpg' for ind in indices]
+            X = np.zeros((len(indices),128**2))
+            for i in range(X.shape[0]):
+                image_indices.append(indices[i].split('.')[0])
+                impath = os.path.join(PROCESSED_IMAGES_DIR, indices[i])
+                try:
+                    x = plt.imread(impath)[:,:,0]
+                except Exception, err:
+                    x = np.ones((128**2,))
+                    defects.append((indices[i], str(err)))
+                X[i,:len(x.ravel())] = x.ravel()
+        else:
+            X = np.zeros((len(all_images), 128**2))
+            for i in range(X.shape[0]):
+                image_indices.append(all_images[i].split('.')[0])
+                impath = os.path.join(PROCESSED_IMAGES_DIR,all_images[i])
+                try:
+                    x = plt.imread(impath)[:,:,0]
+                except Exception, err:
+                    x = np.ones((128**2,))
+                    defects.append((samples[i], str(err)))
+                X[i,:len(x.ravel())] = x.ravel()
+    with open(DEFECTS, 'w') as f:
         json.dump(defects, f)
-    return X[:n_images,:], np.array(indices)
+    assert len(image_indices) == X.shape[0]
+    image_indices = map(int, image_indices)
+    image_indices = np.array(image_indices, dtype=np.int32)
+    return image_indices, X
+            
 
-
-def create_matrix_from_indices(indices):
-    """
-    Create a matrix from flattened arrays of images specified by indices
-    :param indices: List or array of indices
-    :return: array
-    """
-    X = np.zeros((len(indices),128**2))
-    for i in range(X.shape[0]):
-        impath = os.path.join(PROCESSED_IMAGES_DIR, str(indices[i]) + '.png')
-        try:
-            x = plt.imread(impath)[:,:,0]
-            X[i,:] = x.ravel()
-        except:
-            X[i,:] = np.ones((X.shape[1],))
-    return X
-
-
-def store_hd5(name, **kwargs):
+def store_hd5(name, data):
     """
     A convenience function to store numpy arrays as HDF5 file
     :param name: Name of the file to write to.
     :param kwargs: names and values of numpy arrays to be stored.
     """
     f = tables.openFile(name)
-    for key, value in kwargs.iteritems():
+    for key, value in data.iteritems():
         atom = tables.Atom.from_dtype(value.dtype)
-        data = f.createCArray(f.root, key, atom, value.shape)
-        data[:] = value
+        x = f.createCArray(f.root, key, atom, value.shape)
+        x[:] = value
     f.close()
 
+def get_hdf(name, keys):
+    f = tables.openFile(name)
+    arrays = []
+    for key in keys:
+        node = f.getNode(key)
+        data = node.read()
+        arrays.append(data)
+    f.close()
+    return arrays
