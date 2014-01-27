@@ -274,7 +274,7 @@ def store_hd5(name, data):
     :param name: Name of the file to write to.
     :param kwargs: names and values of numpy arrays to be stored.
     """
-    f = tables.openFile(name)
+    f = tables.openFile(name, 'w')
     for key, value in data.iteritems():
         atom = tables.Atom.from_dtype(value.dtype)
         x = f.createCArray(f.root, key, atom, value.shape)
@@ -283,10 +283,19 @@ def store_hd5(name, data):
 
 def get_hdf(name, keys):
     f = tables.openFile(name)
-    arrays = []
+    arrays = {}
     for key in keys:
         node = f.getNode(key)
         data = node.read()
-        arrays.append(data)
+        arrays[key] = data
     f.close()
     return arrays
+
+
+def pca(x, n):
+    x = x - x.mean(0)
+    x = x/x.std(0)
+    co = np.cov(x.T)
+    w, v = np.linalg.eig(co)
+    return v[:,:n]
+
