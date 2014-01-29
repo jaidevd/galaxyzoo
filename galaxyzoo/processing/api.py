@@ -281,6 +281,7 @@ def store_hd5(name, data):
         x[:] = value
     f.close()
 
+
 def get_hdf(name, keys):
     f = tables.openFile(name)
     arrays = {}
@@ -299,3 +300,8 @@ def pca(x, n):
     w, v = np.linalg.eig(co)
     return v[:,:n]
 
+
+def rmse(a, b):
+    assert a.shape == b.shape
+    e = np.sum((a - b)**2, axis=1)
+    return np.sqrt(e.mean())
